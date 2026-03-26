@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the hospital system.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "displayName": { "type": "string", "description": "The user's full name." },
+        "role": { "type": "string", "enum": ["patient", "admin"], "description": "The user's role." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created." }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Doctor": {
+      "title": "Doctor",
+      "description": "A doctor working at the hospital.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the doctor." },
+        "name": { "type": "string", "description": "Full name of the doctor." },
+        "department": { "type": "string", "description": "The department the doctor belongs to." },
+        "timing": { "type": "string", "description": "Available hours for the doctor." },
+        "specialization": { "type": "string", "description": "Doctor's specialization." },
+        "schedule": { "type": "object", "description": "Weekly schedule of the doctor." },
+        "bio": { "type": "string", "description": "Doctor's biography." },
+        "photoUrl": { "type": "string", "description": "URL to the doctor's photo." }
+      },
+      "required": ["name", "department", "timing"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "An appointment booked by a patient.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the appointment." },
+        "patientUid": { "type": "string", "description": "The UID of the patient who booked (optional for guest bookings)." },
+        "patientName": { "type": "string", "description": "Name of the patient." },
+        "mobileNumber": { "type": "string", "description": "Mobile number of the patient." },
+        "department": { "type": "string", "description": "The department for the appointment." },
+        "doctorId": { "type": "string", "description": "The ID of the doctor." },
+        "doctorName": { "type": "string", "description": "Name of the doctor." },
+        "date": { "type": "string", "format": "date", "description": "The date of the appointment." },
+        "tokenNumber": { "type": "number", "description": "The generated token number." },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"], "description": "Status of the appointment." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the appointment was booked." }
+      },
+      "required": ["patientName", "mobileNumber", "department", "doctorId", "date", "tokenNumber"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "A hospital announcement.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the announcement." },
+        "title": { "type": "string", "description": "Title of the announcement." },
+        "content": { "type": "string", "description": "Content of the announcement." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the announcement was made." }
+      },
+      "required": ["title", "content"]
+    },
+    "HealthTip": {
+      "title": "HealthTip",
+      "description": "A daily health tip.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the health tip." },
+        "tip": { "type": "string", "description": "The health tip text." },
+        "category": { "type": "string", "description": "Category of the tip." }
+      },
+      "required": ["tip"]
+    },
+    "BedAvailability": {
+      "title": "BedAvailability",
+      "description": "Real-time bed availability status.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ICU", "General", "Maternity", "Emergency"], "description": "Type of bed." },
+        "total": { "type": "number", "description": "Total number of beds." },
+        "available": { "type": "number", "description": "Available number of beds." }
+      },
+      "required": ["type", "total", "available"]
+    },
+    "BloodAvailability": {
+      "title": "BloodAvailability",
+      "description": "Real-time blood group availability.",
+      "type": "object",
+      "properties": {
+        "group": { "type": "string", "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], "description": "Blood group." },
+        "status": { "type": "string", "enum": ["Available", "Low", "Unavailable"], "description": "Availability status." }
+      },
+      "required": ["group", "status"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "A message sent via the contact form.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the message." },
+        "name": { "type": "string", "description": "Name of the sender." },
+        "email": { "type": "string", "format": "email", "description": "Email of the sender." },
+        "subject": { "type": "string", "description": "Subject of the message." },
+        "message": { "type": "string", "description": "The message content." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the message was sent." }
+      },
+      "required": ["name", "email", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles." },
+    "/doctors/{doctorId}": { "schema": "Doctor", "description": "List of hospital doctors." },
+    "/appointments/{appointmentId}": { "schema": "Appointment", "description": "Patient appointments." },
+    "/announcements/{announcementId}": { "schema": "Announcement", "description": "Hospital announcements." },
+    "/healthTips/{tipId}": { "schema": "HealthTip", "description": "Daily health tips." },
+    "/beds/{bedId}": { "schema": "BedAvailability", "description": "Bed availability status." },
+    "/bloodAvailability/{bloodId}": { "schema": "BloodAvailability", "description": "Blood availability status." },
+    "/contactMessages/{messageId}": { "schema": "ContactMessage", "description": "Messages from contact form." }
+  }
+}

@@ -1,0 +1,163 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (required)
+    //   - role: string (required, 'patient' or 'admin')
+    //   - createdAt: string (required)
+    //
+    // Collection: doctors
+    // Document ID: {doctorId}
+    // Fields:
+    //   - name: string (required)
+    //   - department: string (required)
+    //   - timing: string (required)
+    //   - specialization: string (optional)
+    //
+    // Collection: appointments
+    // Document ID: {appointmentId}
+    // Fields:
+    //   - patientUid: string (required)
+    //   - patientName: string (required)
+    //   - mobileNumber: string (required)
+    //   - department: string (required)
+    //   - doctorId: string (required)
+    //   - date: string (required)
+    //   - tokenNumber: number (required)
+    //   - status: string (required, 'pending', 'confirmed', 'cancelled')
+    //   - createdAt: string (required)
+    //
+    // Collection: announcements
+    // Document ID: {announcementId}
+    // Fields:
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - createdAt: string (required)
+    //
+    // Collection: healthTips
+    // Document ID: {tipId}
+    // Fields:
+    //   - tip: string (required)
+    //   - category: string (optional)
+    //
+    // Collection: beds
+    // Document ID: {bedId}
+    // Fields:
+    //   - type: string (required)
+    //   - total: number (required)
+    //   - available: number (required)
+    //
+    // Collection: bloodAvailability
+    // Document ID: {bloodId}
+    // Fields:
+    //   - group: string (required)
+    //   - status: string (required)
+    //
+    // Collection: contactMessages
+    // Document ID: {messageId}
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required)
+    //   - subject: string (optional)
+    //   - message: string (required)
+    //   - createdAt: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "rutujavpatil2005@gmail.com" && request.auth.token.email_verified == true ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             data.role in ['patient', 'admin'] &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100;
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['patientName', 'mobileNumber', 'department', 'doctorId', 'date', 'tokenNumber', 'status', 'createdAt']) &&
+             data.patientName is string && data.patientName.size() > 0 &&
+             data.mobileNumber is string && data.mobileNumber.size() >= 10 &&
+             data.status in ['pending', 'confirmed', 'cancelled'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (request.resource.data.role == 'patient' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    match /doctors/{doctorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.patientUid);
+      allow create: if isValidAppointment(request.resource.data);
+      allow update: if isAdmin() || (isAuthenticated() && isOwner(resource.data.patientUid) && request.resource.data.status == 'cancelled' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow delete: if isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /healthTips/{tipId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /beds/{bedId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /bloodAvailability/{bloodId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /contactMessages/{messageId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+  }
+}

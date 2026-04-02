@@ -339,6 +339,38 @@ export default function Admin() {
     }
   };
 
+  const [testingEmail, setTestingEmail] = React.useState(false);
+  const [testEmailResult, setTestEmailResult] = React.useState<{ success: boolean, message: string } | null>(null);
+
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch('/api/send-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'test@example.com', // This will fail if SMTP is not configured, but we want to see the error
+          patientName: 'Admin Test',
+          doctorName: 'System Check',
+          department: 'Diagnostics',
+          date: new Date().toISOString(),
+          tokenNumber: 0
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestEmailResult({ success: true, message: "SMTP connection verified! (Test email sent to test@example.com)" });
+      } else {
+        setTestEmailResult({ success: false, message: data.error || "Failed to connect to SMTP server." });
+      }
+    } catch (err: any) {
+      setTestEmailResult({ success: false, message: "Network error: " + err.message });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
   const tabs = [
     { id: 'appointments', name: 'Appointments', icon: Calendar },
     { id: 'patients', name: 'Patients', icon: UserCircle },
@@ -363,14 +395,36 @@ export default function Admin() {
               <p className="text-gray-500">Manage hospital operations and data in real-time.</p>
             </div>
           </div>
-          <button 
-            onClick={seedData}
-            className="flex items-center space-x-2 bg-[#328CC1] hover:bg-[#2a78a5] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
-          >
-            <Database className="h-5 w-5" />
-            <span>Seed Initial Data</span>
-          </button>
+          <div className="flex flex-wrap gap-4">
+            <button 
+              onClick={handleTestEmail}
+              disabled={testingEmail}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-bold transition-all shadow-lg ${
+                testEmailResult?.success ? 'bg-green-500 hover:bg-green-600' : 
+                testEmailResult?.success === false ? 'bg-red-500 hover:bg-red-600' : 'bg-[#0B3C5D] hover:bg-[#082d46]'
+              } text-white`}
+            >
+              <Megaphone className={`h-5 w-5 ${testingEmail ? 'animate-bounce' : ''}`} />
+              <span>{testingEmail ? 'Testing...' : 'Test Email Service'}</span>
+            </button>
+            <button 
+              onClick={seedData}
+              className="flex items-center space-x-2 bg-[#328CC1] hover:bg-[#2a78a5] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
+            >
+              <Database className="h-5 w-5" />
+              <span>Seed Initial Data</span>
+            </button>
+          </div>
         </div>
+
+        {testEmailResult && (
+          <div className={`mb-8 p-4 rounded-2xl flex items-center space-x-3 border ${
+            testEmailResult.success ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
+          }`}>
+            {testEmailResult.success ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+            <p className="text-sm font-medium">{testEmailResult.message}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Tabs */}

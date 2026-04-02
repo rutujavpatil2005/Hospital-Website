@@ -22,24 +22,42 @@ async function startServer() {
 
     const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } = process.env;
 
-    if (!EMAIL_HOST || !EMAIL_PORT || !EMAIL_USER || !EMAIL_PASS) {
-      return res.status(500).json({ error: "Email service not configured (SMTP variables missing)" });
+    const missingVars = [];
+    if (!EMAIL_HOST) missingVars.push("EMAIL_HOST");
+    if (!EMAIL_PORT) missingVars.push("EMAIL_PORT");
+    if (!EMAIL_USER) missingVars.push("EMAIL_USER");
+    if (!EMAIL_PASS) missingVars.push("EMAIL_PASS");
+
+    if (missingVars.length > 0) {
+      console.error(`Email configuration missing: ${missingVars.join(", ")}`);
+      return res.status(500).json({ 
+        error: `Email service not configured. Missing variables: ${missingVars.join(", ")}. Please set these in the Settings > Environment Variables menu.` 
+      });
     }
 
     if (!email) {
-      return res.status(400).json({ error: "Email is required" });
+      return res.status(400).json({ error: "Recipient email is required" });
     }
 
     try {
+      console.log(`Attempting to send email to ${email} via ${EMAIL_HOST}:${EMAIL_PORT}...`);
       const transporter = nodemailer.createTransport({
         host: EMAIL_HOST,
         port: parseInt(EMAIL_PORT),
-        secure: parseInt(EMAIL_PORT) === 465, // true for 465, false for other ports
+        secure: parseInt(EMAIL_PORT) === 465,
         auth: {
           user: EMAIL_USER,
           pass: EMAIL_PASS,
         },
+        // Add timeout to prevent hanging
+        connectionTimeout: 10000, 
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
       });
+
+      // Verify connection configuration
+      await transporter.verify();
+      console.log("SMTP connection verified successfully.");
 
       const mailOptions = {
         from: `"Silver Jubilee Hospital" <${EMAIL_USER}>`,

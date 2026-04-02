@@ -58,7 +58,21 @@ export default function Login() {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+
+      // Ensure user profile exists in Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists()) {
+        const userProfile: UserProfile = {
+          uid: user.uid,
+          email: user.email!,
+          displayName: user.displayName || user.email?.split('@')[0] || 'User',
+          role: user.email === "rutujavpatil2005@gmail.com" ? 'admin' : 'patient',
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, 'users', user.uid), userProfile);
+      }
       navigate(from);
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please check your credentials.');

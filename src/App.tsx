@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile } from './types';
 import { seedDoctors } from './lib/seedData';
@@ -48,19 +48,23 @@ export default function App() {
             seedDoctors();
           }
         } else {
-          // Fallback check for default admin email
-          if (firebaseUser.email === "rutujavpatil2005@gmail.com") {
-            const adminUser: UserProfile = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName || 'Admin',
-              role: 'admin',
-              createdAt: new Date().toISOString()
-            };
-            setUser(adminUser);
-            seedDoctors();
-          } else {
-            setUser(null);
+          // Create user profile if it doesn't exist (fallback for first-time login)
+          const newUser: UserProfile = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email!,
+            displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            role: firebaseUser.email === "rutujavpatil2005@gmail.com" ? 'admin' : 'patient',
+            createdAt: new Date().toISOString()
+          };
+          
+          try {
+            await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
+            setUser(newUser);
+            if (newUser.role === 'admin') seedDoctors();
+          } catch (err) {
+            console.error("Failed to create user profile:", err);
+            // Still set user state for UI even if Firestore write fails (though rules should allow it)
+            setUser(newUser);
           }
         }
       } else {

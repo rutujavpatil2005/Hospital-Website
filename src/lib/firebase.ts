@@ -36,8 +36,8 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if(error instanceof Error && error.message.includes('the client info is offline')) {
-      // Offline
+    if(error instanceof Error && error.message.includes('client is offline')) {
+      console.error("Firestore connection failed: The client is offline or the database configuration is incorrect.");
     }
   }
 }

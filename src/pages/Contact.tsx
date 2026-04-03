@@ -26,7 +26,8 @@ export default function Contact() {
       setFormData({ name: '', email: '', subject: '', message: '' });
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
-      alert("Failed to send message. Please try again.");
+      console.error("Failed to send message:", err);
+      // Silent fail but log it
     } finally {
       setSubmitting(false);
     }

@@ -186,7 +186,18 @@ export default function Admin() {
       await updateDoc(doc(db, 'appointments', id), { date: newDate });
       setReschedulingId(null);
       setNewDate('');
-    } catch (err) { handleFirestoreError(err, OperationType.UPDATE, 'appointments'); }
+    } catch (err) { 
+      handleFirestoreError(err, OperationType.UPDATE, 'appointments'); 
+    }
+  };
+
+  const handleDelete = async (collectionName: string, id: string) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    try {
+      await deleteDoc(doc(db, collectionName, id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, collectionName);
+    }
   };
 
   const filteredAppointments = appointments.filter(app => {
@@ -530,7 +541,7 @@ export default function Admin() {
                             <p className="font-bold text-[#0B3C5D]">{doctorItem.name}</p>
                             <p className="text-xs text-[#328CC1] font-bold uppercase">{doctorItem.department}</p>
                           </div>
-                          <button onClick={() => deleteDoc(doc(db, 'doctors', doctorItem.id))} className="p-2 text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                          <button onClick={() => handleDelete('doctors', doctorItem.id)} className="p-2 text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       ))}
                     </div>
@@ -555,7 +566,7 @@ export default function Admin() {
                         <div key={ann.id} className="p-6 border border-gray-100 rounded-2xl">
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-bold text-[#0B3C5D]">{ann.title}</h4>
-                            <button onClick={() => deleteDoc(doc(db, 'announcements', ann.id))} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                            <button onClick={() => handleDelete('announcements', ann.id)} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                           </div>
                           <p className="text-sm text-gray-500">{ann.content}</p>
                           <p className="text-[10px] text-gray-400 mt-4 font-bold uppercase">{new Date(ann.createdAt).toLocaleString()}</p>
@@ -583,7 +594,7 @@ export default function Admin() {
                         <div key={tip.id} className="p-6 border border-gray-100 rounded-2xl">
                           <div className="flex justify-between items-start mb-2">
                             <span className="text-[10px] font-bold text-[#328CC1] uppercase tracking-wider bg-blue-50 px-2 py-1 rounded">{tip.category}</span>
-                            <button onClick={() => deleteDoc(doc(db, 'healthTips', tip.id))} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                            <button onClick={() => handleDelete('healthTips', tip.id)} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                           </div>
                           <p className="text-sm text-gray-600 italic">"{tip.tip}"</p>
                         </div>
@@ -603,7 +614,7 @@ export default function Admin() {
                       {beds.map(bed => (
                         <div key={bed.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100 relative group">
                           <button 
-                            onClick={() => deleteDoc(doc(db, 'beds', bed.id))}
+                            onClick={() => handleDelete('beds', bed.id)}
                             className="absolute top-4 right-4 p-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Delete this entry"
                           >
@@ -639,7 +650,7 @@ export default function Admin() {
                       {blood.map(item => (
                         <div key={item.id} className="p-4 border border-gray-100 rounded-2xl text-center relative group">
                           <button 
-                            onClick={() => deleteDoc(doc(db, 'bloodAvailability', item.id))}
+                            onClick={() => handleDelete('bloodAvailability', item.id)}
                             className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Delete this entry"
                           >
@@ -673,7 +684,7 @@ export default function Admin() {
                               <h4 className="font-bold text-[#0B3C5D]">{msg.subject}</h4>
                               <p className="text-xs text-gray-400">From: {msg.name} ({msg.email})</p>
                             </div>
-                            <button onClick={() => deleteDoc(doc(db, 'contactMessages', msg.id))} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                            <button onClick={() => handleDelete('contactMessages', msg.id)} className="text-red-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                           </div>
                           <p className="text-sm text-gray-600 leading-relaxed">{msg.message}</p>
                           <p className="text-[10px] text-gray-400 mt-4 font-bold uppercase">{new Date(msg.createdAt).toLocaleString()}</p>

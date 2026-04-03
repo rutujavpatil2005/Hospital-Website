@@ -21,9 +21,13 @@ export default function Dashboard() {
 
     // Fetch User Profile
     const fetchUser = async () => {
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      if (userDoc.exists()) {
-        setUser(userDoc.data() as UserProfile);
+      try {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          setUser(userDoc.data() as UserProfile);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
       }
     };
     fetchUser();
@@ -47,6 +51,7 @@ export default function Dashboard() {
   }, [navigate]);
 
   const handleCancel = async (id: string) => {
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
     try {
       await updateDoc(doc(db, 'appointments', id), { status: 'cancelled' });
     } catch (err) {

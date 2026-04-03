@@ -33,8 +33,9 @@ export default function App() {
         // Seed doctors if the logged-in user is the admin and not already seeded this session
         if (firebaseUser.email === "rutujavpatil2005@gmail.com" && !seededRef.current) {
           seededRef.current = true;
-          seedDoctors();
-          seedAnnouncements();
+          // Seed data in background, handle errors silently
+          seedDoctors().catch(err => console.error("Doctor seeding failed:", err));
+          seedAnnouncements().catch(err => console.error("Announcement seeding failed:", err));
         }
 
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));

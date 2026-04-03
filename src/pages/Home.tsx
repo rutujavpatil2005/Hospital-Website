@@ -32,10 +32,12 @@ export default function Home() {
   React.useEffect(() => {
     // Fetch Announcements
     const annQuery = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'), limit(3));
-    const unsubscribeAnn = onSnapshot(annQuery, (snapshot) => {
+    const unsubAnn = onSnapshot(annQuery, (snapshot) => {
       if (!snapshot.empty) {
         setAnnouncements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement)));
       }
+    }, (err) => {
+      console.error("Announcements snapshot error:", err);
     });
 
     // Fetch Random Health Tip
@@ -45,6 +47,8 @@ export default function Home() {
         const randomIndex = Math.floor(Math.random() * snapshot.docs.length);
         setHealthTip({ id: snapshot.docs[randomIndex].id, ...snapshot.docs[randomIndex].data() } as HealthTip);
       }
+    }, (err) => {
+      console.error("Health tips snapshot error:", err);
     });
 
     // Fetch Bed Availability
@@ -63,6 +67,8 @@ export default function Home() {
         uniqueBeds.sort((a, b) => a.type.localeCompare(b.type));
         setBeds(uniqueBeds);
       }
+    }, (err) => {
+      console.error("Beds snapshot error:", err);
     });
 
     // Fetch Blood Availability
@@ -81,10 +87,12 @@ export default function Home() {
         uniqueBlood.sort((a, b) => a.group.localeCompare(b.group));
         setBlood(uniqueBlood);
       }
+    }, (err) => {
+      console.error("Blood snapshot error:", err);
     });
 
     return () => {
-      unsubscribeAnn();
+      unsubAnn();
       unsubscribeTip();
       unsubscribeBed();
       unsubscribeBlood();

@@ -33,7 +33,8 @@ export default function Appointment() {
         const snapshot = await getDocs(collection(db, 'doctors'));
         setDoctors(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Doctor)));
       } catch (err) {
-        // Silent fail
+        console.error("Failed to fetch doctors:", err);
+        setError("Failed to load doctor list. Please refresh the page.");
       } finally {
         setLoading(false);
       }

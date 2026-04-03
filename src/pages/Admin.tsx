@@ -11,7 +11,6 @@ import {
   Trash2, 
   CheckCircle2, 
   XCircle,
-  Database,
   ShieldCheck,
   MessageSquare,
   Search,
@@ -20,6 +19,7 @@ import {
   UserCircle
 } from 'lucide-react';
 import { db, handleFirestoreError } from '../lib/firebase';
+import { seedDoctors } from '../lib/seedData';
 import { 
   collection, 
   onSnapshot, 
@@ -50,43 +50,10 @@ export default function Admin() {
   const [appointments, setAppointments] = React.useState<Appointment[]>([]);
   const [doctors, setDoctors] = React.useState<Doctor[]>([]);
   const [patients, setPatients] = React.useState<UserProfile[]>([]);
-  const [announcements, setAnnouncements] = React.useState<Announcement[]>([
-    { 
-      id: 'demo-1', 
-      title: 'New Pediatric Wing Opening', 
-      content: 'We are excited to announce the opening of our new state-of-the-art pediatric wing this Monday. Our team is ready to provide the best care for your little ones.',
-      createdAt: new Date(Date.now() - 86400000).toISOString() 
-    },
-    { 
-      id: 'demo-2', 
-      title: 'Free Health Checkup Camp', 
-      content: 'Join us this Sunday for a free general health checkup camp for all citizens of Baramati. Specialist consultations will be available.',
-      createdAt: new Date(Date.now() - 172800000).toISOString() 
-    }
-  ]);
-  const [healthTips, setHealthTips] = React.useState<HealthTip[]>([
-    {
-      id: 'demo-tip',
-      tip: 'Regular handwashing is the simplest and most effective way to prevent the spread of infections.',
-      category: 'Hygiene'
-    }
-  ]);
-  const [beds, setBeds] = React.useState<BedAvailability[]>([
-    { id: 'icu', type: 'ICU', total: 20, available: 5 },
-    { id: 'gen', type: 'General', total: 100, available: 45 },
-    { id: 'mat', type: 'Maternity', total: 30, available: 12 },
-    { id: 'emg', type: 'Emergency', total: 15, available: 3 }
-  ]);
-  const [blood, setBlood] = React.useState<BloodAvailability[]>([
-    { id: 'ap', group: 'A+', status: 'Available' },
-    { id: 'an', group: 'A-', status: 'Low' },
-    { id: 'bp', group: 'B+', status: 'Available' },
-    { id: 'bn', group: 'B-', status: 'Unavailable' },
-    { id: 'abp', group: 'AB+', status: 'Available' },
-    { id: 'abn', group: 'AB-', status: 'Low' },
-    { id: 'op', group: 'O+', status: 'Available' },
-    { id: 'on', group: 'O-', status: 'Available' }
-  ]);
+  const [announcements, setAnnouncements] = React.useState<Announcement[]>([]);
+  const [healthTips, setHealthTips] = React.useState<HealthTip[]>([]);
+  const [beds, setBeds] = React.useState<BedAvailability[]>([]);
+  const [blood, setBlood] = React.useState<BloodAvailability[]>([]);
   const [messages, setMessages] = React.useState<ContactMessage[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
@@ -99,8 +66,7 @@ export default function Admin() {
     department: '', 
     timing: '', 
     specialization: '',
-    bio: '',
-    photoUrl: ''
+    bio: ''
   });
   const [newAnnouncement, setNewAnnouncement] = React.useState({ title: '', content: '' });
   const [newTip, setNewTip] = React.useState({ tip: '', category: '' });
@@ -122,10 +88,20 @@ export default function Admin() {
       if (!s.empty) setHealthTips(s.docs.map(d => ({ id: d.id, ...d.data() } as HealthTip)));
     }, (err) => handleError(err, 'healthTips'));
     const unsubBed = onSnapshot(collection(db, 'beds'), (s) => {
-      if (!s.empty) setBeds(s.docs.map(d => ({ id: d.id, ...d.data() } as BedAvailability)));
+      if (!s.empty) {
+        const bedData = s.docs.map(d => ({ id: d.id, ...d.data() } as BedAvailability));
+        // Sort by type
+        bedData.sort((a, b) => a.type.localeCompare(b.type));
+        setBeds(bedData);
+      }
     }, (err) => handleError(err, 'beds'));
     const unsubBlood = onSnapshot(collection(db, 'bloodAvailability'), (s) => {
-      if (!s.empty) setBlood(s.docs.map(d => ({ id: d.id, ...d.data() } as BloodAvailability)));
+      if (!s.empty) {
+        const bloodData = s.docs.map(d => ({ id: d.id, ...d.data() } as BloodAvailability));
+        // Sort by group name
+        bloodData.sort((a, b) => a.group.localeCompare(b.group));
+        setBlood(bloodData);
+      }
     }, (err) => handleError(err, 'bloodAvailability'));
     const unsubMsg = onSnapshot(query(collection(db, 'contactMessages'), orderBy('createdAt', 'desc')), (s) => setMessages(s.docs.map(d => ({ id: d.id, ...d.data() } as ContactMessage))), (err) => handleError(err, 'contactMessages'));
     const unsubPatients = onSnapshot(query(collection(db, 'users'), where('role', '==', 'patient')), (s) => setPatients(s.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile))), (err) => handleError(err, 'users'));
@@ -143,7 +119,7 @@ export default function Admin() {
         schedule[day] = newDoctor.timing;
       });
       await addDoc(collection(db, 'doctors'), { ...newDoctor, schedule });
-      setNewDoctor({ name: '', department: '', timing: '', specialization: '', bio: '', photoUrl: '' });
+      setNewDoctor({ name: '', department: '', timing: '', specialization: '', bio: '' });
     } catch (err) { handleFirestoreError(err, OperationType.CREATE, 'doctors'); }
   };
 
@@ -224,121 +200,6 @@ export default function Admin() {
 
   const departments = Array.from(new Set(doctors.map(d => d.department)));
 
-  const seedData = async () => {
-    try {
-      // Seed Doctors
-      const initialDoctors = [
-        { 
-          name: 'Dr. Rajesh Patil', 
-          department: 'General OPD', 
-          timing: '9:00 AM - 1:00 PM', 
-          specialization: 'General Physician',
-          bio: 'Dr. Rajesh Patil is a dedicated General Physician with over 15 years of experience in primary care and internal medicine. He is committed to providing comprehensive healthcare to patients of all ages.',
-          photoUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400',
-          schedule: {
-            'Monday': '09:00 AM - 01:00 PM',
-            'Tuesday': '09:00 AM - 01:00 PM',
-            'Wednesday': '09:00 AM - 01:00 PM',
-            'Thursday': '09:00 AM - 01:00 PM',
-            'Friday': '09:00 AM - 01:00 PM',
-            'Saturday': '10:00 AM - 12:00 PM',
-            'Sunday': 'Off'
-          }
-        },
-        { 
-          name: 'Dr. Sneha Kulkarni', 
-          department: 'Maternity', 
-          timing: '10:00 AM - 2:00 PM', 
-          specialization: 'Gynecologist',
-          bio: 'Dr. Sneha Kulkarni specializes in obstetrics and gynecology, with a passion for maternal health and wellness. She has successfully handled numerous complex deliveries and surgeries.',
-          photoUrl: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=400',
-          schedule: {
-            'Monday': '10:00 AM - 02:00 PM',
-            'Tuesday': '10:00 AM - 02:00 PM',
-            'Wednesday': '10:00 AM - 02:00 PM',
-            'Thursday': '10:00 AM - 02:00 PM',
-            'Friday': '10:00 AM - 02:00 PM',
-            'Saturday': 'Off',
-            'Sunday': 'Off'
-          }
-        },
-        { 
-          name: 'Dr. Rutuja Patil', 
-          department: 'Emergency', 
-          timing: '09:00 AM - 05:00 PM', 
-          specialization: 'Emergency Medicine Specialist',
-          bio: 'Expert in emergency medicine and critical care with a focus on rapid patient stabilization.',
-          photoUrl: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=400',
-          schedule: {
-            'Monday': '09:00 AM - 05:00 PM',
-            'Tuesday': '09:00 AM - 05:00 PM',
-            'Wednesday': '09:00 AM - 05:00 PM',
-            'Thursday': '09:00 AM - 05:00 PM',
-            'Friday': '09:00 AM - 05:00 PM',
-            'Saturday': '09:00 AM - 05:00 PM',
-            'Sunday': '09:00 AM - 05:00 PM'
-          }
-        },
-        { 
-          name: 'Dr. Amit Deshmukh', 
-          department: 'Emergency', 
-          timing: '24/7', 
-          specialization: 'Trauma Specialist',
-          bio: 'Dr. Amit Deshmukh is a highly skilled trauma specialist who thrives in high-pressure environments. He leads the emergency department with a focus on rapid response and life-saving interventions.',
-          photoUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
-          schedule: {
-            'Monday': '24/7',
-            'Tuesday': '24/7',
-            'Wednesday': '24/7',
-            'Thursday': '24/7',
-            'Friday': '24/7',
-            'Saturday': '24/7',
-            'Sunday': '24/7'
-          }
-        },
-        { 
-          name: 'Dr. Priya More', 
-          department: 'Paediatrics', 
-          timing: '11:00 AM - 4:00 PM', 
-          specialization: 'Pediatrician',
-          bio: 'Dr. Priya More is known for her gentle approach and expertise in child healthcare. She provides comprehensive care for infants, children, and adolescents, ensuring their healthy growth and development.',
-          photoUrl: 'https://images.unsplash.com/photo-1559839734-2b71f1536780?auto=format&fit=crop&q=80&w=400',
-          schedule: {
-            'Monday': '11:00 AM - 04:00 PM',
-            'Tuesday': '11:00 AM - 04:00 PM',
-            'Wednesday': '11:00 AM - 04:00 PM',
-            'Thursday': '11:00 AM - 04:00 PM',
-            'Friday': '11:00 AM - 04:00 PM',
-            'Saturday': '11:00 AM - 01:00 PM',
-            'Sunday': 'Off'
-          }
-        }
-      ];
-      for (const d of initialDoctors) await addDoc(collection(db, 'doctors'), d);
-
-      // Seed Beds
-      const initialBeds = [
-        { type: 'ICU', total: 20, available: 5 },
-        { type: 'General', total: 100, available: 45 },
-        { type: 'Maternity', total: 30, available: 12 },
-        { type: 'Emergency', total: 15, available: 3 }
-      ];
-      for (const b of initialBeds) await addDoc(collection(db, 'beds'), b);
-
-      // Seed Blood
-      const groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-      for (const g of groups) await addDoc(collection(db, 'bloodAvailability'), { group: g, status: 'Available' });
-
-      // Seed Health Tip
-      await addDoc(collection(db, 'healthTips'), { tip: 'Drink at least 8 glasses of water daily to stay hydrated.', category: 'Hydration' });
-      await addDoc(collection(db, 'healthTips'), { tip: 'A 30-minute walk every day can significantly improve heart health.', category: 'Exercise' });
-
-      console.log("Data seeded successfully!");
-    } catch (err) {
-      console.error("Failed to seed data:", err);
-    }
-  };
-
   const [testingEmail, setTestingEmail] = React.useState(false);
   const [testEmailResult, setTestEmailResult] = React.useState<{ success: boolean, message: string } | null>(null);
 
@@ -406,13 +267,6 @@ export default function Admin() {
             >
               <Megaphone className={`h-5 w-5 ${testingEmail ? 'animate-bounce' : ''}`} />
               <span>{testingEmail ? 'Testing...' : 'Test Email Service'}</span>
-            </button>
-            <button 
-              onClick={seedData}
-              className="flex items-center space-x-2 bg-[#328CC1] hover:bg-[#2a78a5] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
-            >
-              <Database className="h-5 w-5" />
-              <span>Seed Initial Data</span>
             </button>
           </div>
         </div>
@@ -662,7 +516,6 @@ export default function Admin() {
                       <input required placeholder="Department" className="p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#328CC1]" value={newDoctor.department} onChange={e => setNewDoctor({...newDoctor, department: e.target.value})} />
                       <input required placeholder="Timing (e.g. 9AM-1PM)" className="p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#328CC1]" value={newDoctor.timing} onChange={e => setNewDoctor({...newDoctor, timing: e.target.value})} />
                       <input required placeholder="Specialization" className="p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#328CC1]" value={newDoctor.specialization} onChange={e => setNewDoctor({...newDoctor, specialization: e.target.value})} />
-                      <input placeholder="Photo URL" className="p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#328CC1]" value={newDoctor.photoUrl} onChange={e => setNewDoctor({...newDoctor, photoUrl: e.target.value})} />
                       <textarea placeholder="Doctor Bio" className="p-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-[#328CC1] md:col-span-2" rows={3} value={newDoctor.bio} onChange={e => setNewDoctor({...newDoctor, bio: e.target.value})} />
                       <button type="submit" className="md:col-span-2 bg-[#0B3C5D] text-white py-3 rounded-xl font-bold hover:bg-[#082d46] transition-all flex items-center justify-center space-x-2">
                         <Plus className="h-5 w-5" />
@@ -742,10 +595,20 @@ export default function Admin() {
                 {/* Beds Tab */}
                 {activeTab === 'beds' && (
                   <div className="space-y-8">
-                    <h2 className="text-2xl font-bold text-[#0B3C5D]">Bed Availability Tracker</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-[#0B3C5D]">Bed Availability Tracker</h2>
+                      <p className="text-xs text-gray-400 italic">Delete any repetitive entries if they exist.</p>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {beds.map(bed => (
-                        <div key={bed.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div key={bed.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-100 relative group">
+                          <button 
+                            onClick={() => deleteDoc(doc(db, 'beds', bed.id))}
+                            className="absolute top-4 right-4 p-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete this entry"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                           <div className="flex justify-between items-center mb-4">
                             <h4 className="font-bold text-[#0B3C5D]">{bed.type} Beds</h4>
                             <span className="text-xs font-bold text-gray-400 uppercase">Total: {bed.total}</span>
@@ -768,10 +631,20 @@ export default function Admin() {
                 {/* Blood Tab */}
                 {activeTab === 'blood' && (
                   <div className="space-y-8">
-                    <h2 className="text-2xl font-bold text-[#0B3C5D]">Blood Bank Inventory</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold text-[#0B3C5D]">Blood Bank Inventory</h2>
+                      <p className="text-xs text-gray-400 italic">Delete any repetitive entries if they exist.</p>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {blood.map(item => (
-                        <div key={item.id} className="p-4 border border-gray-100 rounded-2xl text-center">
+                        <div key={item.id} className="p-4 border border-gray-100 rounded-2xl text-center relative group">
+                          <button 
+                            onClick={() => deleteDoc(doc(db, 'bloodAvailability', item.id))}
+                            className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete this entry"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
                           <p className="text-xl font-black text-[#D9534F] mb-3">{item.group}</p>
                           <select 
                             className="w-full p-2 text-xs font-bold rounded-lg border border-gray-200 outline-none"

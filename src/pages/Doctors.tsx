@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Search, User, Clock, Stethoscope, Calendar, ChevronRight, Database } from 'lucide-react';
-import { db, auth } from '../lib/firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Search, User, Clock, Stethoscope, Calendar, ChevronRight } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { Doctor } from '../types';
 import { Link } from 'react-router-dom';
 
@@ -101,26 +101,6 @@ export default function Doctors() {
               <User className="h-16 w-16 text-gray-200 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-[#0B3C5D] mb-2">No doctors in database</h3>
               <p className="text-gray-500 mb-8">The doctor list is currently empty.</p>
-              
-              {/* Admin Seed Button */}
-              {auth.currentUser?.email === "rutujavpatil2005@gmail.com" ? (
-                <button 
-                  onClick={async () => {
-                    setLoading(true);
-                    const { seedDoctors } = await import('../lib/seedData');
-                    await seedDoctors();
-                    setLoading(false);
-                  }}
-                  className="bg-[#328CC1] hover:bg-[#2a78a5] text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-lg flex items-center space-x-2 mx-auto"
-                >
-                  <Database className="h-5 w-5" />
-                  <span>Seed Doctors Now</span>
-                </button>
-              ) : (
-                <Link to="/login" className="text-[#328CC1] font-bold hover:underline">
-                  Log in as Admin to seed data
-                </Link>
-              )}
             </div>
           ) : filteredDoctors.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -132,20 +112,9 @@ export default function Doctors() {
                 >
                   <div className="p-8">
                     <div className="flex items-center space-x-4 mb-6">
-                      {doctor.photoUrl ? (
-                        <div className="h-20 w-20 rounded-2xl overflow-hidden shadow-lg border-2 border-white">
-                          <img 
-                            src={doctor.photoUrl} 
-                            alt={doctor.name} 
-                            className="h-full w-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                      ) : (
-                        <div className="bg-blue-100 p-4 rounded-2xl text-[#328CC1]">
-                          <User className="h-10 w-10" />
-                        </div>
-                      )}
+                      <div className="bg-blue-100 p-4 rounded-2xl text-[#328CC1]">
+                        <User className="h-10 w-10" />
+                      </div>
                       <div>
                         <h3 className="text-xl font-bold text-[#0B3C5D]">{doctor.name}</h3>
                         <p className="text-sm font-bold text-[#328CC1] uppercase tracking-widest">{doctor.department}</p>

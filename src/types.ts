@@ -18,7 +18,6 @@ export interface Doctor {
   specialization: string;
   schedule?: DoctorSchedule;
   bio?: string;
-  photoUrl?: string;
 }
 
 export interface Appointment {

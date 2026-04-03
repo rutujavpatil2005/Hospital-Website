@@ -24,41 +24,10 @@ import SymptomChecker from '../components/SymptomChecker';
 import EmergencyGuide from '../components/EmergencyGuide';
 
 export default function Home() {
-  const [announcements, setAnnouncements] = React.useState<Announcement[]>([
-    { 
-      id: 'demo-1', 
-      title: 'New Pediatric Wing Opening', 
-      content: 'We are excited to announce the opening of our new state-of-the-art pediatric wing this Monday. Our team is ready to provide the best care for your little ones.',
-      createdAt: new Date(Date.now() - 86400000).toISOString() 
-    },
-    { 
-      id: 'demo-2', 
-      title: 'Free Health Checkup Camp', 
-      content: 'Join us this Sunday for a free general health checkup camp for all citizens of Baramati. Specialist consultations will be available.',
-      createdAt: new Date(Date.now() - 172800000).toISOString() 
-    }
-  ]);
-  const [healthTip, setHealthTip] = React.useState<HealthTip | null>({
-    id: 'demo-tip',
-    tip: 'Regular handwashing is the simplest and most effective way to prevent the spread of infections.',
-    category: 'Hygiene'
-  });
-  const [beds, setBeds] = React.useState<BedAvailability[]>([
-    { id: 'icu', type: 'ICU', total: 20, available: 5 },
-    { id: 'gen', type: 'General', total: 100, available: 45 },
-    { id: 'mat', type: 'Maternity', total: 30, available: 12 },
-    { id: 'emg', type: 'Emergency', total: 15, available: 3 }
-  ]);
-  const [blood, setBlood] = React.useState<BloodAvailability[]>([
-    { id: 'ap', group: 'A+', status: 'Available' },
-    { id: 'an', group: 'A-', status: 'Low' },
-    { id: 'bp', group: 'B+', status: 'Available' },
-    { id: 'bn', group: 'B-', status: 'Unavailable' },
-    { id: 'abp', group: 'AB+', status: 'Available' },
-    { id: 'abn', group: 'AB-', status: 'Low' },
-    { id: 'op', group: 'O+', status: 'Available' },
-    { id: 'on', group: 'O-', status: 'Available' }
-  ]);
+  const [announcements, setAnnouncements] = React.useState<Announcement[]>([]);
+  const [healthTip, setHealthTip] = React.useState<HealthTip | null>(null);
+  const [beds, setBeds] = React.useState<BedAvailability[]>([]);
+  const [blood, setBlood] = React.useState<BloodAvailability[]>([]);
 
   React.useEffect(() => {
     // Fetch Announcements
@@ -82,7 +51,17 @@ export default function Home() {
     const bedQuery = collection(db, 'beds');
     const unsubscribeBed = onSnapshot(bedQuery, (snapshot) => {
       if (!snapshot.empty) {
-        setBeds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BedAvailability)));
+        const bedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BedAvailability));
+        // Deduplicate by bed type
+        const uniqueBeds = Array.from(
+          bedData.reduce((map, item) => {
+            if (!map.has(item.type)) map.set(item.type, item);
+            return map;
+          }, new Map<string, BedAvailability>()).values()
+        );
+        // Sort by type for consistent display
+        uniqueBeds.sort((a, b) => a.type.localeCompare(b.type));
+        setBeds(uniqueBeds);
       }
     });
 
@@ -90,7 +69,17 @@ export default function Home() {
     const bloodQuery = collection(db, 'bloodAvailability');
     const unsubscribeBlood = onSnapshot(bloodQuery, (snapshot) => {
       if (!snapshot.empty) {
-        setBlood(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BloodAvailability)));
+        const bloodData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BloodAvailability));
+        // Deduplicate by group name, keeping the most recently updated (or first found)
+        const uniqueBlood = Array.from(
+          bloodData.reduce((map, item) => {
+            if (!map.has(item.group)) map.set(item.group, item);
+            return map;
+          }, new Map<string, BloodAvailability>()).values()
+        );
+        // Sort by group name for consistent display
+        uniqueBlood.sort((a, b) => a.group.localeCompare(b.group));
+        setBlood(uniqueBlood);
       }
     });
 

@@ -4,7 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { UserProfile } from './types';
-import { seedDoctors } from './lib/seedData';
+import { seedDoctors, seedAnnouncements } from './lib/seedData';
 
 // Components
 import Navbar from './components/Navbar';
@@ -25,13 +25,18 @@ import DoctorProfile from './pages/DoctorProfile';
 export default function App() {
   const [user, setUser] = React.useState<UserProfile | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const seededRef = React.useRef(false);
 
   React.useEffect(() => {
-    // Seed doctors on mount (silently fails if no permissions)
-    seedDoctors();
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Seed doctors if the logged-in user is the admin and not already seeded this session
+        if (firebaseUser.email === "rutujavpatil2005@gmail.com" && !seededRef.current) {
+          seededRef.current = true;
+          seedDoctors();
+          seedAnnouncements();
+        }
+
         const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data() as UserProfile;
@@ -42,11 +47,6 @@ export default function App() {
           }
           
           setUser(userData);
-          
-          // Seed doctors if user is admin
-          if (userData.role === 'admin') {
-            seedDoctors();
-          }
         } else {
           // Create user profile if it doesn't exist (fallback for first-time login)
           const newUser: UserProfile = {
@@ -60,7 +60,6 @@ export default function App() {
           try {
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             setUser(newUser);
-            if (newUser.role === 'admin') seedDoctors();
           } catch (err) {
             console.error("Failed to create user profile:", err);
             // Still set user state for UI even if Firestore write fails (though rules should allow it)

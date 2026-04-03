@@ -59,13 +59,6 @@ export default function DoctorProfile() {
             <ArrowLeft className="h-4 w-4" /> Back to Doctors
           </Link>
           <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-            <div className="w-48 h-48 rounded-2xl overflow-hidden bg-white/10 flex items-center justify-center border-4 border-white/20 shadow-xl">
-              {doctor.photoUrl ? (
-                <img src={doctor.photoUrl} alt={doctor.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                <User className="h-24 w-24 text-white/40" />
-              )}
-            </div>
             <div className="text-center md:text-left">
               <h1 className="text-4xl font-bold mb-2">{doctor.name}</h1>
               <p className="text-xl text-[#328CC1] font-semibold mb-4">{doctor.specialization}</p>

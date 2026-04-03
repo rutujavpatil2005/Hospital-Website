@@ -1,159 +1,176 @@
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from './firebase';
-import { Doctor } from '../types';
+import { Doctor, Announcement } from '../types';
 
 const DOCTORS_SEED: Omit<Doctor, 'id'>[] = [
   // General OPD
   {
-    name: "Dr. Rajesh Patil",
+    name: "Dr. Arvind Swaminathan",
     department: "General OPD",
-    specialization: "General Physician",
-    timing: "10:00 AM - 02:00 PM",
-    bio: "Expert in general medicine with 15 years of experience.",
-    photoUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400"
+    specialization: "Internal Medicine",
+    timing: "09:00 AM - 01:00 PM",
+    bio: "Senior consultant with 20+ years of experience in chronic disease management.",
+    schedule: { "Monday": "09:00 AM - 01:00 PM", "Tuesday": "09:00 AM - 01:00 PM", "Wednesday": "09:00 AM - 01:00 PM", "Thursday": "09:00 AM - 01:00 PM", "Friday": "09:00 AM - 01:00 PM", "Saturday": "10:00 AM - 12:00 PM", "Sunday": "Off" }
   },
   {
-    name: "Dr. Sunita Deshmukh",
+    name: "Dr. Meera Ranganathan",
     department: "General OPD",
-    specialization: "Family Medicine",
+    specialization: "Family Physician",
     timing: "02:00 PM - 06:00 PM",
-    bio: "Dedicated to providing comprehensive primary care.",
-    photoUrl: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=400"
-  },
-  {
-    name: "Dr. Rutuja Patil",
-    department: "Emergency",
-    specialization: "Emergency Medicine Specialist",
-    timing: "09:00 AM - 05:00 PM",
-    bio: "Expert in emergency medicine and critical care with a focus on rapid patient stabilization.",
-    photoUrl: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=400"
+    bio: "Specializes in preventive healthcare and wellness for all age groups.",
+    schedule: { "Monday": "02:00 PM - 06:00 PM", "Tuesday": "02:00 PM - 06:00 PM", "Wednesday": "02:00 PM - 06:00 PM", "Thursday": "02:00 PM - 06:00 PM", "Friday": "02:00 PM - 06:00 PM", "Saturday": "Off", "Sunday": "Off" }
   },
   // Emergency
   {
-    name: "Dr. Amit Shinde",
+    name: "Dr. Sanjay Bharadwaj",
     department: "Emergency",
-    specialization: "Trauma Specialist",
+    specialization: "Critical Care Specialist",
     timing: "08:00 AM - 04:00 PM",
-    bio: "Specialized in handling critical trauma cases.",
-    photoUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400"
+    bio: "Expert in acute trauma management and emergency surgical interventions.",
+    schedule: { "Monday": "08:00 AM - 04:00 PM", "Tuesday": "08:00 AM - 04:00 PM", "Wednesday": "08:00 AM - 04:00 PM", "Thursday": "08:00 AM - 04:00 PM", "Friday": "08:00 AM - 04:00 PM", "Saturday": "08:00 AM - 04:00 PM", "Sunday": "08:00 AM - 04:00 PM" }
   },
   {
-    name: "Dr. Priya Kulkarni",
+    name: "Dr. Neha Chaturvedi",
     department: "Emergency",
     specialization: "Emergency Medicine",
     timing: "04:00 PM - 12:00 AM",
-    bio: "Expert in rapid response and emergency procedures.",
-    photoUrl: "https://images.unsplash.com/photo-1559839734-2b71f153678f?auto=format&fit=crop&q=80&w=400"
+    bio: "Dedicated to rapid patient stabilization and high-pressure medical care.",
+    schedule: { "Monday": "04:00 PM - 12:00 AM", "Tuesday": "04:00 PM - 12:00 AM", "Wednesday": "04:00 PM - 12:00 AM", "Thursday": "04:00 PM - 12:00 AM", "Friday": "04:00 PM - 12:00 AM", "Saturday": "04:00 PM - 12:00 AM", "Sunday": "04:00 PM - 12:00 AM" }
   },
   // ICU
   {
-    name: "Dr. Vikram Pawar",
+    name: "Dr. Rohan Malhotra",
     department: "ICU",
-    specialization: "Intensivist",
+    specialization: "Pulmonologist",
     timing: "09:00 AM - 05:00 PM",
-    bio: "Critical care specialist with focus on multi-organ failure.",
-    photoUrl: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400"
+    bio: "Specialist in respiratory failure and advanced mechanical ventilation.",
+    schedule: { "Monday": "09:00 AM - 05:00 PM", "Tuesday": "09:00 AM - 05:00 PM", "Wednesday": "09:00 AM - 05:00 PM", "Thursday": "09:00 AM - 05:00 PM", "Friday": "09:00 AM - 05:00 PM", "Saturday": "Off", "Sunday": "Off" }
   },
   {
-    name: "Dr. Anjali More",
+    name: "Dr. Ananya Reddy",
     department: "ICU",
-    specialization: "Critical Care",
+    specialization: "Cardiac Intensivist",
     timing: "09:00 PM - 06:00 AM",
-    bio: "Expert in managing life-support systems and critical monitoring.",
-    photoUrl: "https://images.unsplash.com/photo-1614608682850-e0d6ed316d47?auto=format&fit=crop&q=80&w=400"
+    bio: "Expert in post-operative cardiac care and hemodynamics monitoring.",
+    schedule: { "Monday": "09:00 PM - 06:00 AM", "Tuesday": "09:00 PM - 06:00 AM", "Wednesday": "09:00 PM - 06:00 AM", "Thursday": "09:00 PM - 06:00 AM", "Friday": "09:00 PM - 06:00 AM", "Saturday": "09:00 PM - 06:00 AM", "Sunday": "09:00 PM - 06:00 AM" }
   },
   // Maternity
   {
-    name: "Dr. Snehal Jadhav",
-    department: "Maternity",
-    specialization: "Gynaecologist",
-    timing: "10:00 AM - 01:00 PM",
-    bio: "Expert in high-risk pregnancies and neonatal care.",
-    photoUrl: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&q=80&w=400"
-  },
-  {
-    name: "Dr. Kavita Gaware",
+    name: "Dr. Shalini Varma",
     department: "Maternity",
     specialization: "Obstetrician",
+    timing: "10:00 AM - 01:00 PM",
+    bio: "Passionate about natural birthing and comprehensive prenatal education.",
+    schedule: { "Monday": "10:00 AM - 01:00 PM", "Tuesday": "10:00 AM - 01:00 PM", "Wednesday": "10:00 AM - 01:00 PM", "Thursday": "10:00 AM - 01:00 PM", "Friday": "10:00 AM - 01:00 PM", "Saturday": "Off", "Sunday": "Off" }
+  },
+  {
+    name: "Dr. Pooja Hegde",
+    department: "Maternity",
+    specialization: "Fertility Specialist",
     timing: "02:00 PM - 05:00 PM",
-    bio: "Dedicated to maternal health and safe deliveries.",
-    photoUrl: "https://images.unsplash.com/photo-1559839734-2b71f153678f?auto=format&fit=crop&q=80&w=400"
+    bio: "Helping families with advanced reproductive technologies and care.",
+    schedule: { "Monday": "02:00 PM - 05:00 PM", "Tuesday": "02:00 PM - 05:00 PM", "Wednesday": "02:00 PM - 05:00 PM", "Thursday": "02:00 PM - 05:00 PM", "Friday": "02:00 PM - 05:00 PM", "Saturday": "Off", "Sunday": "Off" }
   },
   // Paediatrics
   {
-    name: "Dr. Rahul Thorat",
+    name: "Dr. Arjun Kapoor",
     department: "Paediatrics",
-    specialization: "Child Specialist",
+    specialization: "Pediatric Cardiologist",
     timing: "11:00 AM - 03:00 PM",
-    bio: "Compassionate care for infants and children.",
-    photoUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400"
+    bio: "Specialized in congenital heart defects and pediatric heart health.",
+    schedule: { "Monday": "11:00 AM - 03:00 PM", "Tuesday": "11:00 AM - 03:00 PM", "Wednesday": "11:00 AM - 03:00 PM", "Thursday": "11:00 AM - 03:00 PM", "Friday": "11:00 AM - 03:00 PM", "Saturday": "11:00 AM - 01:00 PM", "Sunday": "Off" }
   },
   {
-    name: "Dr. Megha Salunke",
+    name: "Dr. Divya Nair",
     department: "Paediatrics",
-    specialization: "Neonatologist",
+    specialization: "Pediatric Surgeon",
     timing: "04:00 PM - 08:00 PM",
-    bio: "Specialized in newborn care and developmental paediatrics.",
-    photoUrl: "https://images.unsplash.com/photo-1614608682850-e0d6ed316d47?auto=format&fit=crop&q=80&w=400"
+    bio: "Expert in minimally invasive surgeries for infants and children.",
+    schedule: { "Monday": "04:00 PM - 08:00 PM", "Tuesday": "04:00 PM - 08:00 PM", "Wednesday": "04:00 PM - 08:00 PM", "Thursday": "04:00 PM - 08:00 PM", "Friday": "04:00 PM - 08:00 PM", "Saturday": "Off", "Sunday": "Off" }
   },
   // Orthopaedics
   {
-    name: "Dr. Sameer Kadam",
+    name: "Dr. Karthik Ramachandran",
     department: "Orthopaedics",
-    specialization: "Joint Replacement Surgeon",
+    specialization: "Sports Medicine",
     timing: "10:00 AM - 02:00 PM",
-    bio: "Expert in knee and hip replacement surgeries.",
-    photoUrl: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=400"
+    bio: "Treating professional athletes and sports-related musculoskeletal injuries.",
+    schedule: { "Monday": "10:00 AM - 02:00 PM", "Tuesday": "10:00 AM - 02:00 PM", "Wednesday": "10:00 AM - 02:00 PM", "Thursday": "10:00 AM - 02:00 PM", "Friday": "10:00 AM - 02:00 PM", "Saturday": "Off", "Sunday": "Off" }
   },
   {
-    name: "Dr. Mahesh Bhosale",
+    name: "Dr. Simran Kaur",
     department: "Orthopaedics",
-    specialization: "Spine Specialist",
+    specialization: "Pediatric Orthopaedist",
     timing: "03:00 PM - 07:00 PM",
-    bio: "Specialized in spinal disorders and sports injuries.",
-    photoUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=400"
+    bio: "Focuses on bone and joint health in growing children and adolescents.",
+    schedule: { "Monday": "03:00 PM - 07:00 PM", "Tuesday": "03:00 PM - 07:00 PM", "Wednesday": "03:00 PM - 07:00 PM", "Thursday": "03:00 PM - 07:00 PM", "Friday": "03:00 PM - 07:00 PM", "Saturday": "Off", "Sunday": "Off" }
   },
   // Ophthalmology
   {
-    name: "Dr. Aarti Shah",
+    name: "Dr. Vivek Oberoi",
     department: "Ophthalmology",
-    specialization: "Eye Surgeon",
+    specialization: "Cornea Specialist",
     timing: "09:00 AM - 01:00 PM",
-    bio: "Expert in cataract and laser eye surgeries.",
-    photoUrl: "https://images.unsplash.com/photo-1559839734-2b71f153678f?auto=format&fit=crop&q=80&w=400"
+    bio: "Expert in corneal transplants and advanced refractive surgeries.",
+    schedule: { "Monday": "09:00 AM - 01:00 PM", "Tuesday": "09:00 AM - 01:00 PM", "Wednesday": "09:00 AM - 01:00 PM", "Thursday": "09:00 AM - 01:00 PM", "Friday": "09:00 AM - 01:00 PM", "Saturday": "09:00 AM - 11:00 AM", "Sunday": "Off" }
   },
   {
-    name: "Dr. Nitin Mehta",
+    name: "Dr. Rashmi Desai",
     department: "Ophthalmology",
-    specialization: "Retina Specialist",
+    specialization: "Oculoplastic Surgeon",
     timing: "02:00 PM - 06:00 PM",
-    bio: "Specialized in retinal disorders and glaucoma management.",
-    photoUrl: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400"
+    bio: "Specialized in eyelid surgery and orbital reconstructive procedures.",
+    schedule: { "Monday": "02:00 PM - 06:00 PM", "Tuesday": "02:00 PM - 06:00 PM", "Wednesday": "02:00 PM - 06:00 PM", "Thursday": "02:00 PM - 06:00 PM", "Friday": "02:00 PM - 06:00 PM", "Saturday": "Off", "Sunday": "Off" }
   }
 ];
+
+const ANNOUNCEMENTS_SEED: Omit<Announcement, 'id'>[] = [
+  {
+    title: "Free Health Checkup Camp",
+    content: "Silver Jubilee Hospital is organizing a free health checkup camp this Sunday from 10 AM to 4 PM. All are welcome for general checkups and consultations.",
+    createdAt: new Date().toISOString()
+  },
+  {
+    title: "New Cardiology Wing Opened",
+    content: "We are proud to announce the opening of our state-of-the-art Cardiology department with advanced diagnostic and surgical facilities.",
+    createdAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+  },
+  {
+    title: "Blood Donation Drive",
+    content: "Join us for a blood donation drive on April 10th. Your contribution can save lives. Register at the reception desk.",
+    createdAt: new Date(Date.now() - 172800000).toISOString() // 2 days ago
+  }
+];
+
+export const seedAnnouncements = async () => {
+  try {
+    const annRef = collection(db, 'announcements');
+    const existing = await getDocs(query(annRef, limit(1)));
+    if (existing.empty) {
+      for (const ann of ANNOUNCEMENTS_SEED) {
+        await addDoc(annRef, ann);
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error("Error seeding announcements:", error);
+    return false;
+  }
+};
 
 export const seedDoctors = async () => {
   try {
     const doctorsRef = collection(db, 'doctors');
-    const snapshot = await getDocs(doctorsRef);
-    
-    // If we already have doctors, don't seed again (or we could check per department)
-    if (snapshot.size >= DOCTORS_SEED.length) {
-      return;
-    }
-
     for (const doctor of DOCTORS_SEED) {
-      // Check if doctor already exists by name to avoid duplicates
       const q = query(doctorsRef, where('name', '==', doctor.name));
       const existing = await getDocs(q);
-      
       if (existing.empty) {
         await addDoc(doctorsRef, doctor);
       }
     }
-  } catch (error: any) {
-    if (error.code !== 'permission-denied') {
-      // Silent fail for seeding
-    }
+    return true;
+  } catch (error) {
+    console.error("Error seeding doctors:", error);
+    return false;
   }
 };
